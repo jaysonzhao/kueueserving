@@ -1,0 +1,54 @@
+---
+# Task: Create LocalQueue for Tenant Namespace
+# Creates a LocalQueue in the specified namespace pointing to a ClusterQueue
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: create-local-queue
+spec:
+  params:
+    - name: local-queue-name
+      type: string
+      description: "Name of the LocalQueue to create"
+    - name: namespace
+      type: string
+      description: "Namespace where the LocalQueue will be created"
+    - name: cluster-queue-name
+      type: string
+      description: "Name of the ClusterQueue this LocalQueue points to"
+  steps:
+    - name: create-localqueue
+      image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+      script: |
+        #!/bin/bash
+        set -e
+
+        LQ_NAME="$(params.local-queue-name)"
+        NAMESPACE="$(params.namespace)"
+        CLUSTER_QUEUE="$(params.cluster-queue-name)"
+
+        # Check if namespace exists
+        if ! oc get namespace ${NAMESPACE} &>/dev/null; then
+          echo "Namespace ${NAMESPACE} does not exist. Creating..."
+          oc create namespace ${NAMESPACE}
+        fi
+
+        # Check if LocalQueue already exists
+        if oc get localqueue ${LQ_NAME} -n ${NAMESPACE} &>/dev/null; then
+          echo "LocalQueue ${LQ_NAME} already exists in namespace ${NAMESPACE}. Updating..."
+        else
+          echo "Creating LocalQueue: ${LQ_NAME} in namespace: ${NAMESPACE}"
+        fi
+
+        cat <<EOF | oc apply -f -
+        apiVersion: kueue.x-k8s.io/v1beta1
+        kind: LocalQueue
+        metadata:
+          name: ${LQ_NAME}
+          namespace: ${NAMESPACE}
+        spec:
+          clusterQueue: ${CLUSTER_QUEUE}
+        EOF
+
+        echo "LocalQueue created successfully"
+        oc get localqueue ${LQ_NAME} -n ${NAMESPACE}

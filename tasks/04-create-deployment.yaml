@@ -1,0 +1,265 @@
+---
+# Task: Deploy Model with Kueue Integration
+# Creates a Deployment or InferenceService with Kueue workload labeling
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: deploy-model
+spec:
+  params:
+    - name: model-name
+      type: string
+      description: "Name of the model/deployment"
+    - name: namespace
+      type: string
+      description: "Target namespace for deployment"
+    - name: queue-name
+      type: string
+      description: "LocalQueue name for Kueue management"
+    - name: image-url
+      type: string
+      description: "Container image URL"
+    - name: cpu-request
+      type: string
+      default: "1"
+      description: "CPU request (e.g., 1)"
+    - name: memory-request
+      type: string
+      default: "2Gi"
+      description: "Memory request (e.g., 2Gi)"
+    - name: cpu-limit
+      type: string
+      default: "2"
+      description: "CPU limit"
+    - name: memory-limit
+      type: string
+      default: "4Gi"
+      description: "Memory limit"
+    - name: gpu-request
+      type: string
+      default: "0"
+      description: "GPU request (e.g., 0 or 1)"
+    - name: gpu-limit
+      type: string
+      default: "0"
+      description: "GPU limit"
+    - name: deployment-type
+      type: string
+      default: "deployment"
+      description: "deployment or inferenceservice"
+    - name: model-format
+      type: string
+      default: "vLLM"
+      description: "Model format for KServe"
+    - name: storage-uri
+      type: string
+      default: ""
+      description: "Storage URI for model (for KServe)"
+  steps:
+    - name: deploy-model
+      image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+      script: |
+        #!/bin/bash
+        set -e
+
+        MODEL_NAME="$(params.model-name)"
+        NAMESPACE="$(params.namespace)"
+        QUEUE_NAME="$(params.queue-name)"
+        IMAGE_URL="$(params.image-url)"
+        CPU_REQUEST="$(params.cpu-request)"
+        MEMORY_REQUEST="$(params.memory-request)"
+        CPU_LIMIT="$(params.cpu-limit)"
+        MEMORY_LIMIT="$(params.memory-limit)"
+        GPU_REQUEST="$(params.gpu-request)"
+        GPU_LIMIT="$(params.gpu-limit)"
+        DEPLOYMENT_TYPE="$(params.deployment-type)"
+        MODEL_FORMAT="$(params.model-format)"
+        STORAGE_URI="$(params.storage-uri)"
+
+        # Label for Kueue workload management
+        KUEUE_LABEL="kueue.x-k8s.io/queue-name: ${QUEUE_NAME}"
+
+        if [ "$DEPLOYMENT_TYPE" == "inferenceservice" ]; then
+          echo "Deploying InferenceService: ${MODEL_NAME}"
+
+          if [ -z "$STORAGE_URI" ]; then
+            cat <<EOF | oc apply -f -
+            apiVersion: serving.kserve.io/v1beta1
+            kind: InferenceService
+            metadata:
+              name: ${MODEL_NAME}
+              namespace: ${NAMESPACE}
+              labels:
+                app.kubernetes.io/name: ${MODEL_NAME}
+                ${KUEUE_LABEL}
+            spec:
+              predictor:
+                minReplicas: 1
+                maxReplicas: 1
+                model:
+                  modelFormat:
+                    name: ${MODEL_FORMAT}
+                  runtime: ${MODEL_NAME}
+                  storageUri: ${STORAGE_URI}
+                  resources:
+                    requests:
+                      cpu: "${CPU_REQUEST}"
+                      memory: "${MEMORY_REQUEST}"
+                    limits:
+                      cpu: "${CPU_LIMIT}"
+                      memory: "${MEMORY_LIMIT}"
+            EOF
+          else
+            # With GPU resources
+            if [ "$GPU_REQUEST" != "0" ] && [ "$GPU_LIMIT" != "0" ]; then
+              cat <<EOF | oc apply -f -
+              apiVersion: serving.kserve.io/v1beta1
+              kind: InferenceService
+              metadata:
+                name: ${MODEL_NAME}
+                namespace: ${NAMESPACE}
+                labels:
+                  app.kubernetes.io/name: ${MODEL_NAME}
+                  ${KUEUE_LABEL}
+              spec:
+                predictor:
+                  minReplicas: 1
+                  maxReplicas: 1
+                  tolerations:
+                    - key: "nvidia.com/gpu"
+                      operator: "Equal"
+                      value: "true"
+                      effect: "NoSchedule"
+                  model:
+                    modelFormat:
+                      name: ${MODEL_FORMAT}
+                    runtime: ${MODEL_NAME}
+                    storageUri: ${STORAGE_URI}
+                    resources:
+                      requests:
+                        cpu: "${CPU_REQUEST}"
+                        memory: "${MEMORY_REQUEST}"
+                        nvidia.com/gpu: "${GPU_REQUEST}"
+                      limits:
+                        cpu: "${CPU_LIMIT}"
+                        memory: "${MEMORY_LIMIT}"
+                        nvidia.com/gpu: "${GPU_LIMIT}"
+              EOF
+            else
+              cat <<EOF | oc apply -f -
+              apiVersion: serving.kserve.io/v1beta1
+              kind: InferenceService
+              metadata:
+                name: ${MODEL_NAME}
+                namespace: ${NAMESPACE}
+                labels:
+                  app.kubernetes.io/name: ${MODEL_NAME}
+                  ${KUEUE_LABEL}
+              spec:
+                predictor:
+                  minReplicas: 1
+                  maxReplicas: 1
+                  model:
+                    modelFormat:
+                      name: ${MODEL_FORMAT}
+                    runtime: ${MODEL_NAME}
+                    storageUri: ${STORAGE_URI}
+                    resources:
+                      requests:
+                        cpu: "${CPU_REQUEST}"
+                        memory: "${MEMORY_REQUEST}"
+                      limits:
+                        cpu: "${CPU_LIMIT}"
+                        memory: "${MEMORY_LIMIT}"
+              EOF
+            fi
+          fi
+
+          echo "InferenceService ${MODEL_NAME} created in namespace ${NAMESPACE}"
+          oc get inferenceservice ${MODEL_NAME} -n ${NAMESPACE}
+        else
+          echo "Deploying Deployment: ${MODEL_NAME}"
+
+          # Determine if GPU is needed
+          if [ "$GPU_REQUEST" != "0" ] && [ "$GPU_LIMIT" != "0" ]; then
+            cat <<EOF | oc apply -f -
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: ${MODEL_NAME}
+              namespace: ${NAMESPACE}
+              labels:
+                app: ${MODEL_NAME}
+                ${KUEUE_LABEL}
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: ${MODEL_NAME}
+              template:
+                metadata:
+                  labels:
+                    app: ${MODEL_NAME}
+                    ${KUEUE_LABEL}
+                spec:
+                  tolerations:
+                    - key: "nvidia.com/gpu"
+                      operator: "Equal"
+                      value: "true"
+                      effect: "NoSchedule"
+                  containers:
+                    - name: model
+                      image: ${IMAGE_URL}
+                      resources:
+                        requests:
+                          cpu: "${CPU_REQUEST}"
+                          memory: "${MEMORY_REQUEST}"
+                          nvidia.com/gpu: "${GPU_REQUEST}"
+                        limits:
+                          cpu: "${CPU_LIMIT}"
+                          memory: "${MEMORY_LIMIT}"
+                          nvidia.com/gpu: "${GPU_LIMIT}"
+                      ports:
+                        - containerPort: 8080
+                          name: http
+            EOF
+          else
+            cat <<EOF | oc apply -f -
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: ${MODEL_NAME}
+              namespace: ${NAMESPACE}
+              labels:
+                app: ${MODEL_NAME}
+                ${KUEUE_LABEL}
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: ${MODEL_NAME}
+              template:
+                metadata:
+                  labels:
+                    app: ${MODEL_NAME}
+                    ${KUEUE_LABEL}
+                spec:
+                  containers:
+                    - name: model
+                      image: ${IMAGE_URL}
+                      resources:
+                        requests:
+                          cpu: "${CPU_REQUEST}"
+                          memory: "${MEMORY_REQUEST}"
+                        limits:
+                          cpu: "${CPU_LIMIT}"
+                          memory: "${MEMORY_LIMIT}"
+                      ports:
+                        - containerPort: 8080
+                          name: http
+            EOF
+          fi
+
+          echo "Deployment ${MODEL_NAME} created in namespace ${NAMESPACE}"
+          oc get deployment ${MODEL_NAME} -n ${NAMESPACE}
+        fi

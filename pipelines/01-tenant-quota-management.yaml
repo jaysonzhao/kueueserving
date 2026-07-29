@@ -1,0 +1,90 @@
+---
+# Pipeline: Tenant Quota Management (Admin Pipeline)
+# Used by cluster administrators to provision capacity for a new tenant
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: tenant-quota-management
+spec:
+  description: |
+    This pipeline creates a complete quota setup for a new tenant:
+    1. Creates a ResourceFlavor (default or GPU-enabled)
+    2. Creates a ClusterQueue with specified resource quotas
+
+  params:
+    - name: tenant-name
+      type: string
+      description: "Tenant name (used for naming ClusterQueue)"
+    - name: cpu-quota
+      type: string
+      description: "CPU quota (e.g., 8)"
+    - name: memory-quota
+      type: string
+      description: "Memory quota (e.g., 40Gi)"
+    - name: pod-quota
+      type: string
+      description: "Pod quota (e.g., 10)"
+    - name: enable-gpu
+      type: string
+      default: "false"
+      description: "Enable GPU quota (true/false)"
+    - name: gpu-quota
+      type: string
+      default: "0"
+      description: "GPU quota (e.g., 4). Only used if enable-gpu is true."
+    - name: gpu-node-label-key
+      type: string
+      default: "nvidia.com/gpu.present"
+      description: "Node label key for GPU nodes"
+    - name: gpu-node-label-value
+      type: string
+      default: "true"
+      description: "Node label value for GPU nodes"
+
+  tasks:
+    # Task 1: Create default ResourceFlavor
+    - name: create-default-flavor
+      taskRef:
+        name: create-resource-flavor
+      params:
+        - name: flavor-name
+          value: "$(params.tenant-name)-default"
+        - name: node-label-key
+          value: ""
+        - name: node-label-value
+          value: ""
+
+    # Task 2: Create GPU ResourceFlavor if enabled
+    - name: create-gpu-flavor
+      taskRef:
+        name: create-resource-flavor
+      params:
+        - name: flavor-name
+          value: "$(params.tenant-name)-gpu"
+        - name: node-label-key
+          value: "$(params.gpu-node-label-key)"
+        - name: node-label-value
+          value: "$(params.gpu-node-label-value)"
+      when:
+        - input: "$(params.enable-gpu)"
+          operator: in
+          values: ["true"]
+
+    # Task 3: Create ClusterQueue
+    - name: create-cluster-queue
+      taskRef:
+        name: create-cluster-queue
+      params:
+        - name: cluster-queue-name
+          value: "$(params.tenant-name)-cluster-queue"
+        - name: cpu-quota
+          value: "$(params.cpu-quota)"
+        - name: memory-quota
+          value: "$(params.memory-quota)"
+        - name: pod-quota
+          value: "$(params.pod-quota)"
+        - name: gpu-quota
+          value: "$(params.gpu-quota)"
+      runAfter:
+        - create-default-flavor
+        - create-gpu-flavor

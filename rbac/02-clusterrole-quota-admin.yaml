@@ -1,0 +1,41 @@
+---
+# ClusterRole for Tenant Quota Management Pipeline
+# Grants permissions to manage ClusterQueues and ResourceFlavors cluster-wide
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: quota-management-pipeline-role
+rules:
+  # ResourceFlavor management
+  - apiGroups: ["kueue.x-k8s.io"]
+    resources: ["resourceflavors"]
+    verbs: ["create", "update", "patch", "get", "list", "watch"]
+
+  # ClusterQueue management
+  - apiGroups: ["kueue.x-k8s.io"]
+    resources: ["clusterqueues"]
+    verbs: ["create", "update", "patch", "get", "list", "watch", "delete"]
+
+  # LocalQueue read access (to verify existing queues)
+  - apiGroups: ["kueue.x-k8s.io"]
+    resources: ["localqueues"]
+    verbs: ["get", "list"]
+
+  # Namespace read access (to verify namespaces exist)
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+---
+# ClusterRoleBinding for quota management SA
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: quota-management-pipeline-crb
+subjects:
+  - kind: ServiceAccount
+    name: quota-management-pipeline-sa
+    namespace: openshift-pipelines
+roleRef:
+  kind: ClusterRole
+  name: quota-management-pipeline-role
+  apiGroup: rbac.authorization.k8s.io
