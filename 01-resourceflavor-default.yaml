@@ -1,0 +1,14 @@
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ResourceFlavor
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"kueue.x-k8s.io/v1beta1","kind":"ResourceFlavor","metadata":{"annotations":{},"name":"default-flavor"},"spec":{}}
+  creationTimestamp: "2026-07-29T03:41:16Z"
+  finalizers:
+  - kueue.x-k8s.io/resource-in-use
+  generation: 1
+  name: default-flavor
+  resourceVersion: "5194586"
+  uid: 09f4d08e-514b-41e0-8d2b-b474deb1efa7
+spec: {}

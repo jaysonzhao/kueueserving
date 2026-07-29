@@ -1,0 +1,46 @@
+apiVersion: kueue.openshift.io/v1
+kind: Kueue
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"kueue.openshift.io/v1","kind":"Kueue","metadata":{"annotations":{},"name":"cluster"},"spec":{"config":{"integrations":{"frameworks":["Pod","Deployment","BatchJob","RayJob"]}},"logLevel":"Normal"}}
+  creationTimestamp: "2026-07-29T03:40:14Z"
+  finalizers:
+  - kueue.openshift.io/finalizer
+  generation: 3
+  name: cluster
+  resourceVersion: "5225097"
+  uid: cb377e9e-57c4-42c8-9b31-9c037c5d7e70
+spec:
+  config:
+    integrations:
+      frameworks:
+      - Pod
+      - Deployment
+      - BatchJob
+      - RayJob
+  logLevel: Normal
+  operatorLogLevel: Normal
+status:
+  conditions:
+  - lastTransitionTime: "2026-07-29T03:58:10Z"
+    message: All 2 replicas are ready
+    reason: AllReplicasReady
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2026-07-29T03:58:10Z"
+    message: Deployment is up to date
+    reason: AsExpected
+    status: "False"
+    type: Progressing
+  - lastTransitionTime: "2026-07-29T03:58:10Z"
+    message: ""
+    reason: AsExpected
+    status: "False"
+    type: Degraded
+  - lastTransitionTime: "2026-07-29T03:40:40Z"
+    message: cert-manager is installed
+    reason: CertManagerInstalled
+    status: "True"
+    type: CertManagerAvailable
+  readyReplicas: 2

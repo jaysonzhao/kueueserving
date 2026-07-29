@@ -1,0 +1,91 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    meta.helm.sh/release-name: ai501-student-content
+    meta.helm.sh/release-namespace: ai501
+    modelFormat: vLLM
+    openshift.io/display-name: llama-32
+    serving.kserve.io/deploymentMode: Standard
+    serving.kserve.io/stop: "false"
+  creationTimestamp: "2026-07-27T06:43:44Z"
+  finalizers:
+  - inferenceservice.finalizers
+  - odh.inferenceservice.finalizers
+  generation: 1
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    kueue.x-k8s.io/queue-name: llm-local-queue
+    monitoring.opendatahub.io/scrape: "true"
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/genai-asset: "true"
+  name: llama-32
+  namespace: ai501
+  resourceVersion: "5310853"
+  uid: 38bbfc7f-2799-44af-abc3-3c47582f7c62
+spec:
+  predictor:
+    automountServiceAccountToken: false
+    maxReplicas: 1
+    minReplicas: 0
+    model:
+      args:
+      - --dtype=half
+      - --max-model-len=20000
+      - --gpu-memory-utilization=0.95
+      - --enable-auto-tool-choice
+      - --tool-call-parser=llama3_json
+      - --chat-template=/opt/app-root/template/tool_chat_template_llama3.2_json.jinja
+      modelFormat:
+        name: vLLM
+      name: ""
+      resources:
+        limits:
+          cpu: "4"
+          memory: 20Gi
+          nvidia.com/gpu: "1"
+        requests:
+          cpu: "1"
+          memory: 8Gi
+          nvidia.com/gpu: "1"
+      runtime: llama-32
+      storageUri: oci://quay.io/redhat-ai-services/modelcar-catalog:llama-3.2-3b-instruct
+    tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Equal
+      value: g5
+status:
+  address:
+    url: http://llama-32-predictor.ai501.svc.cluster.local
+  components:
+    predictor:
+      url: http://llama-32-predictor-ai501.example.com
+  conditions:
+  - lastTransitionTime: "2026-07-28T04:24:23Z"
+    status: "True"
+    type: IngressReady
+  - lastTransitionTime: "2026-07-29T04:47:05Z"
+    message: ReplicaSet "llama-32-predictor-6875bdf5d6" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: PredictorReady
+  - lastTransitionTime: "2026-07-29T04:47:05Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2026-07-28T04:24:23Z"
+    severity: Info
+    status: "False"
+    type: Stopped
+  deploymentMode: Standard
+  modelStatus:
+    copies:
+      failedCopies: 0
+      totalCopies: 1
+    states:
+      activeModelState: Loaded
+      targetModelState: Loaded
+    transitionStatus: UpToDate
+  observedGeneration: 3
+  servingRuntimeName: llama-32
+  url: http://llama-32-predictor.ai501.svc.cluster.local

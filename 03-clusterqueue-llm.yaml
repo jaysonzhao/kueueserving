@@ -1,0 +1,109 @@
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ClusterQueue
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"kueue.x-k8s.io/v1beta1","kind":"ClusterQueue","metadata":{"annotations":{},"name":"llm-cluster-queue"},"spec":{"namespaceSelector":{},"resourceGroups":[{"coveredResources":["cpu","memory","pods"],"flavors":[{"name":"default-flavor","resources":[{"name":"cpu","nominalQuota":"8"},{"name":"memory","nominalQuota":"40Gi"},{"name":"pods","nominalQuota":"3"}]}]},{"coveredResources":["nvidia.com/gpu","cpu","memory"],"flavors":[{"name":"gpu-flavor","resources":[{"name":"nvidia.com/gpu","nominalQuota":"4"},{"name":"cpu","nominalQuota":"8"},{"name":"memory","nominalQuota":"40Gi"}]}]}]}}
+  creationTimestamp: "2026-07-29T03:41:29Z"
+  finalizers:
+  - kueue.x-k8s.io/resource-in-use
+  generation: 2
+  name: llm-cluster-queue
+  resourceVersion: "5302636"
+  uid: bc010c0f-9866-431d-83da-c0ec268774ed
+spec:
+  flavorFungibility:
+    whenCanBorrow: MayStopSearch
+    whenCanPreempt: TryNextFlavor
+  namespaceSelector: {}
+  preemption:
+    borrowWithinCohort:
+      policy: Never
+    reclaimWithinCohort: Never
+    withinClusterQueue: Never
+  queueingStrategy: BestEffortFIFO
+  resourceGroups:
+  - coveredResources:
+    - cpu
+    - memory
+    - pods
+    flavors:
+    - name: default-flavor
+      resources:
+      - name: cpu
+        nominalQuota: "8"
+      - name: memory
+        nominalQuota: 40Gi
+      - name: pods
+        nominalQuota: "3"
+  - coveredResources:
+    - nvidia.com/gpu
+    - cpu
+    - memory
+    flavors:
+    - name: gpu-flavor
+      resources:
+      - name: nvidia.com/gpu
+        nominalQuota: "4"
+      - name: cpu
+        nominalQuota: "8"
+      - name: memory
+        nominalQuota: 40Gi
+  stopPolicy: None
+status:
+  admittedWorkloads: 1
+  conditions:
+  - lastTransitionTime: "2026-07-29T03:41:29Z"
+    message: Can admit new workloads
+    observedGeneration: 2
+    reason: Ready
+    status: "True"
+    type: Active
+  flavorsReservation:
+  - name: default-flavor
+    resources:
+    - borrowed: "0"
+      name: cpu
+      total: "0"
+    - borrowed: "0"
+      name: memory
+      total: "0"
+    - borrowed: "0"
+      name: pods
+      total: "1"
+  - name: gpu-flavor
+    resources:
+    - borrowed: "0"
+      name: cpu
+      total: 1010m
+    - borrowed: "0"
+      name: memory
+      total: 8207Mi
+    - borrowed: "0"
+      name: nvidia.com/gpu
+      total: "1"
+  flavorsUsage:
+  - name: default-flavor
+    resources:
+    - borrowed: "0"
+      name: cpu
+      total: "0"
+    - borrowed: "0"
+      name: memory
+      total: "0"
+    - borrowed: "0"
+      name: pods
+      total: "1"
+  - name: gpu-flavor
+    resources:
+    - borrowed: "0"
+      name: cpu
+      total: 1010m
+    - borrowed: "0"
+      name: memory
+      total: 8207Mi
+    - borrowed: "0"
+      name: nvidia.com/gpu
+      total: "1"
+  pendingWorkloads: 0
+  reservingWorkloads: 1

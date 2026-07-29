@@ -1,0 +1,60 @@
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: LocalQueue
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"kueue.x-k8s.io/v1beta1","kind":"LocalQueue","metadata":{"annotations":{},"name":"llm-local-queue","namespace":"ai501"},"spec":{"clusterQueue":"llm-cluster-queue"}}
+  creationTimestamp: "2026-07-29T03:41:22Z"
+  generation: 1
+  name: llm-local-queue
+  namespace: ai501
+  resourceVersion: "5302637"
+  uid: af217d94-c97b-4698-b767-efcfffc18885
+spec:
+  clusterQueue: llm-cluster-queue
+  stopPolicy: None
+status:
+  admittedWorkloads: 1
+  conditions:
+  - lastTransitionTime: "2026-07-29T03:41:29Z"
+    message: Can submit new workloads to localQueue
+    observedGeneration: 1
+    reason: Ready
+    status: "True"
+    type: Active
+  flavorsReservation:
+  - name: default-flavor
+    resources:
+    - name: cpu
+      total: "0"
+    - name: memory
+      total: "0"
+    - name: pods
+      total: "1"
+  - name: gpu-flavor
+    resources:
+    - name: cpu
+      total: 1010m
+    - name: memory
+      total: 8207Mi
+    - name: nvidia.com/gpu
+      total: "1"
+  flavorsUsage:
+  - name: default-flavor
+    resources:
+    - name: cpu
+      total: "0"
+    - name: memory
+      total: "0"
+    - name: pods
+      total: "1"
+  - name: gpu-flavor
+    resources:
+    - name: cpu
+      total: 1010m
+    - name: memory
+      total: 8207Mi
+    - name: nvidia.com/gpu
+      total: "1"
+  pendingWorkloads: 0
+  reservingWorkloads: 1
