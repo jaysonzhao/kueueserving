@@ -1,0 +1,23 @@
+---
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: test-tenant-quota-run
+  namespace: rollingtest
+spec:
+  pipelineRef:
+    name: tenant-quota-management
+  serviceAccountName: quota-management-pipeline-sa
+  params:
+    - name: tenant-name
+      value: "test-tenant"
+    - name: cpu-quota
+      value: "4"
+    - name: memory-quota
+      value: "16Gi"
+    - name: pod-quota
+      value: "5"
+    - name: enable-gpu
+      value: "false"
+    - name: gpu-quota
+      value: "0"

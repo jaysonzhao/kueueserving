@@ -1,0 +1,116 @@
+---
+# Task: Create ClusterQueue for Tenant
+# Creates a ClusterQueue with resource quotas from parameters
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: create-cluster-queue
+spec:
+  params:
+    - name: cluster-queue-name
+      type: string
+      description: "Name of the ClusterQueue to create"
+    - name: cpu-quota
+      type: string
+      description: "CPU quota (e.g., 8)"
+    - name: memory-quota
+      type: string
+      description: "Memory quota (e.g., 40Gi)"
+    - name: pod-quota
+      type: string
+      description: "Pod quota (e.g., 10)"
+    - name: gpu-quota
+      type: string
+      default: "0"
+      description: "GPU quota (e.g., 4). Default 0 means no GPU resource group."
+    - name: cpu-quota-gpu
+      type: string
+      default: ""
+      description: "CPU quota for GPU flavor. If empty, uses same as default."
+    - name: memory-quota-gpu
+      type: string
+      default: ""
+      description: "Memory quota for GPU flavor. If empty, uses same as default."
+  steps:
+    - name: create-clusterqueue
+      image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          CQ_NAME="$(params.cluster-queue-name)"
+          CPU_QUOTA="$(params.cpu-quota)"
+          MEM_QUOTA="$(params.memory-quota)"
+          POD_QUOTA="$(params.pod-quota)"
+          GPU_QUOTA="$(params.gpu-quota)"
+          CPU_QUOTA_GPU="$(params.cpu-quota-gpu)"
+          MEM_QUOTA_GPU="$(params.memory-quota-gpu)"
+
+          [ -z "$CPU_QUOTA_GPU" ] && CPU_QUOTA_GPU=$CPU_QUOTA
+          [ -z "$MEM_QUOTA_GPU" ] && MEM_QUOTA_GPU=$MEM_QUOTA
+
+          echo "Creating ClusterQueue: ${CQ_NAME}"
+
+          if [ "$GPU_QUOTA" == "0" ] || [ -z "$GPU_QUOTA" ]; then
+            cat <<'EOF' | oc apply -f -
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ClusterQueue
+metadata:
+  name: ${CQ_NAME}
+spec:
+  namespaceSelector: {}
+  resourceGroups:
+    - coveredResources:
+        - cpu
+        - memory
+        - pods
+      flavors:
+        - name: default-flavor
+          resources:
+            - name: cpu
+              nominalQuota: "${CPU_QUOTA}"
+            - name: memory
+              nominalQuota: "${MEM_QUOTA}"
+            - name: pods
+              nominalQuota: "${POD_QUOTA}"
+EOF
+          else
+            cat <<'EOF' | oc apply -f -
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ClusterQueue
+metadata:
+  name: ${CQ_NAME}
+spec:
+  namespaceSelector: {}
+  resourceGroups:
+    - coveredResources:
+        - cpu
+        - memory
+        - pods
+      flavors:
+        - name: default-flavor
+          resources:
+            - name: cpu
+              nominalQuota: "${CPU_QUOTA}"
+            - name: memory
+              nominalQuota: "${MEM_QUOTA}"
+            - name: pods
+              nominalQuota: "${POD_QUOTA}"
+    - coveredResources:
+        - nvidia.com/gpu
+        - cpu
+        - memory
+      flavors:
+        - name: gpu-flavor
+          resources:
+            - name: nvidia.com/gpu
+              nominalQuota: "${GPU_QUOTA}"
+            - name: cpu
+              nominalQuota: "${CPU_QUOTA_GPU}"
+            - name: memory
+              nominalQuota: "${MEM_QUOTA_GPU}"
+EOF
+          fi
+
+          echo "ClusterQueue ${CQ_NAME} created"
+          oc get clusterqueue ${CQ_NAME}

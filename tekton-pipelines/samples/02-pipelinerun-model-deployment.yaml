@@ -1,0 +1,72 @@
+---
+# Sample PipelineRun: Model Deployment with Deployment (non-GPU)
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: model-deployment-llama32
+  namespace: openshift-pipelines
+spec:
+  pipelineRef:
+    name: model-deployment
+  serviceAccountName: model-deployment-pipeline-sa
+  params:
+    - name: model-name
+      value: "llama-32"
+    - name: namespace
+      value: "ai501"
+    - name: cluster-queue-name
+      value: "llm-cluster-queue"
+    - name: image-url
+      value: "quay.io/llm/model:v1"
+    - name: cpu-request
+      value: "4"
+    - name: memory-request
+      value: "8Gi"
+    - name: cpu-limit
+      value: "4"
+    - name: memory-limit
+      value: "20Gi"
+    - name: gpu-request
+      value: "1"
+    - name: gpu-limit
+      value: "1"
+    - name: deployment-type
+      value: "deployment"
+---
+# Sample PipelineRun: Model Deployment with KServe InferenceService (GPU)
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: model-deployment-llama32-kserve
+  namespace: openshift-pipelines
+spec:
+  pipelineRef:
+    name: model-deployment
+  serviceAccountName: model-deployment-pipeline-sa
+  params:
+    - name: model-name
+      value: "llama-32"
+    - name: namespace
+      value: "ai501"
+    - name: cluster-queue-name
+      value: "llm-cluster-queue"
+    - name: image-url
+      value: ""
+    - name: cpu-request
+      value: "4"
+    - name: memory-request
+      value: "8Gi"
+    - name: cpu-limit
+      value: "4"
+    - name: memory-limit
+      value: "20Gi"
+    - name: gpu-request
+      value: "1"
+    - name: gpu-limit
+      value: "1"
+    - name: deployment-type
+      value: "inferenceservice"
+    - name: model-format
+      value: "vLLM"
+    - name: storage-uri
+      value: "oci://quay.io/redhat-ai-services/modelcar-catalog:llama-3.2-3b-instruct"

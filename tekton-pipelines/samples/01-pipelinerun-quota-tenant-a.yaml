@@ -1,0 +1,49 @@
+---
+# Sample PipelineRun: Tenant Quota Management
+# Run this as a cluster admin to provision quota for tenant-a
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: quota-management-tenant-a
+  namespace: openshift-pipelines
+spec:
+  pipelineRef:
+    name: tenant-quota-management
+  serviceAccountName: quota-management-pipeline-sa
+  params:
+    - name: tenant-name
+      value: "tenant-a"
+    - name: cpu-quota
+      value: "8"
+    - name: memory-quota
+      value: "40Gi"
+    - name: pod-quota
+      value: "10"
+    - name: enable-gpu
+      value: "true"
+    - name: gpu-quota
+      value: "4"
+---
+# Sample PipelineRun: Tenant Quota Management (CPU-only, no GPU)
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: quota-management-tenant-b
+  namespace: openshift-pipelines
+spec:
+  pipelineRef:
+    name: tenant-quota-management
+  serviceAccountName: quota-management-pipeline-sa
+  params:
+    - name: tenant-name
+      value: "tenant-b"
+    - name: cpu-quota
+      value: "16"
+    - name: memory-quota
+      value: "64Gi"
+    - name: pod-quota
+      value: "20"
+    - name: enable-gpu
+      value: "false"
+    - name: gpu-quota
+      value: "0"

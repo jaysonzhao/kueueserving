@@ -1,0 +1,53 @@
+---
+# Role for Model Deployment Pipeline
+# Grants permissions within tenant namespaces to create LocalQueues and Deployments
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: model-deployment-pipeline-role
+  namespace: openshift-pipelines  # Pipeline service account namespace
+rules:
+  # LocalQueue management in tenant namespaces
+  - apiGroups: ["kueue.x-k8s.io"]
+    resources: ["localqueues"]
+    verbs: ["create", "update", "patch", "get", "list", "watch", "delete"]
+
+  # Watch ClusterQueues to get available quotas
+  - apiGroups: ["kueue.x-k8s.io"]
+    resources: ["clusterqueues"]
+    verbs: ["get", "list", "watch"]
+
+  # Deployments management
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["create", "update", "patch", "get", "list", "watch", "delete"]
+
+  # InferenceServices (KServe) management
+  - apiGroups: ["serving.kserve.io"]
+    resources: ["inferenceservices"]
+    verbs: ["create", "update", "patch", "get", "list", "watch", "delete"]
+
+  # Services management (for creating services)
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create", "update", "patch", "get", "list", "watch", "delete"]
+
+  # ConfigMaps and Secrets read
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+---
+# RoleBinding for model deployment SA
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: model-deployment-pipeline-rolebinding
+  namespace: openshift-pipelines
+subjects:
+  - kind: ServiceAccount
+    name: model-deployment-pipeline-sa
+    namespace: openshift-pipelines
+roleRef:
+  kind: Role
+  name: model-deployment-pipeline-role
+  apiGroup: rbac.authorization.k8s.io

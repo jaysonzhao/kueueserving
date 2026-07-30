@@ -1,0 +1,109 @@
+---
+# Pipeline: Model Deployment (Developer/Tenant Pipeline)
+# Used by data scientists to deploy a model with Kueue queue management
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: model-deployment
+spec:
+  description: |
+    This pipeline deploys a model with Kueue workload management:
+    1. Creates a LocalQueue in the specified namespace
+    2. Deploys the model (Deployment or InferenceService) with Kueue label
+
+  params:
+    - name: model-name
+      type: string
+      description: "Name of the model/deployment"
+    - name: namespace
+      type: string
+      description: "Target namespace for deployment"
+    - name: cluster-queue-name
+      type: string
+      description: "ClusterQueue name to attach LocalQueue to"
+    - name: image-url
+      type: string
+      description: "Container image URL for the model"
+    - name: cpu-request
+      type: string
+      default: "1"
+      description: "CPU request (e.g., 1)"
+    - name: memory-request
+      type: string
+      default: "2Gi"
+      description: "Memory request (e.g., 2Gi)"
+    - name: cpu-limit
+      type: string
+      default: "2"
+      description: "CPU limit"
+    - name: memory-limit
+      type: string
+      default: "4Gi"
+      description: "Memory limit"
+    - name: gpu-request
+      type: string
+      default: "0"
+      description: "GPU request (e.g., 0 or 1)"
+    - name: gpu-limit
+      type: string
+      default: "0"
+      description: "GPU limit"
+    - name: deployment-type
+      type: string
+      default: "deployment"
+      description: "deployment or inferenceservice"
+    - name: model-format
+      type: string
+      default: "vLLM"
+      description: "Model format for KServe (vLLM, pytorch, etc.)"
+    - name: storage-uri
+      type: string
+      default: ""
+      description: "Storage URI for model (e.g., s3://bucket/model)"
+
+  tasks:
+    # Task 1: Create LocalQueue
+    - name: create-local-queue
+      taskRef:
+        name: create-local-queue
+      params:
+        - name: local-queue-name
+          value: "$(params.model-name)-queue"
+        - name: namespace
+          value: "$(params.namespace)"
+        - name: cluster-queue-name
+          value: "$(params.cluster-queue-name)"
+
+    # Task 2: Deploy Model
+    - name: deploy-model
+      taskRef:
+        name: deploy-model
+      params:
+        - name: model-name
+          value: "$(params.model-name)"
+        - name: namespace
+          value: "$(params.namespace)"
+        - name: queue-name
+          value: "$(params.model-name)-queue"
+        - name: image-url
+          value: "$(params.image-url)"
+        - name: cpu-request
+          value: "$(params.cpu-request)"
+        - name: memory-request
+          value: "$(params.memory-request)"
+        - name: cpu-limit
+          value: "$(params.cpu-limit)"
+        - name: memory-limit
+          value: "$(params.memory-limit)"
+        - name: gpu-request
+          value: "$(params.gpu-request)"
+        - name: gpu-limit
+          value: "$(params.gpu-limit)"
+        - name: deployment-type
+          value: "$(params.deployment-type)"
+        - name: model-format
+          value: "$(params.model-format)"
+        - name: storage-uri
+          value: "$(params.storage-uri)"
+      runAfter:
+        - create-local-queue
