@@ -1,0 +1,57 @@
+---
+# Task: Create ResourceFlavor for Tenant
+# Creates a ResourceFlavor that matches nodes based on provided node label selector
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: create-resource-flavor
+spec:
+  params:
+    - name: flavor-name
+      type: string
+      description: "Name of the ResourceFlavor to create"
+    - name: node-label-key
+      type: string
+      default: ""
+      description: "Node label key to match (e.g., nvidia.com/gpu.present). Empty for default flavor."
+    - name: node-label-value
+      type: string
+      default: ""
+      description: "Node label value to match"
+  steps:
+    - name: create-flavor
+      image: image-registry.openshift-image-registry.svc:5000/openshift/cli:latest
+      script: |
+        #!/bin/bash
+        set -e
+
+        FLAVOR_NAME="$(params.flavor-name)"
+        LABEL_KEY="$(params.node-label-key)"
+        LABEL_VALUE="$(params.node-label-value)"
+
+        if [ -z "$LABEL_KEY" ]; then
+          # Default flavor - no node labels needed
+          cat <<EOF | oc apply -f -
+          apiVersion: kueue.x-k8s.io/v1beta1
+          kind: ResourceFlavor
+          metadata:
+            name: ${FLAVOR_NAME}
+          spec: {}
+          EOF
+          echo "Created default ResourceFlavor: ${FLAVOR_NAME}"
+        else
+          # Flavor with node label selector
+          cat <<EOF | oc apply -f -
+          apiVersion: kueue.x-k8s.io/v1beta1
+          kind: ResourceFlavor
+          metadata:
+            name: ${FLAVOR_NAME}
+          spec:
+            nodeLabels:
+              ${LABEL_KEY}: "${LABEL_VALUE}"
+          EOF
+          echo "Created ResourceFlavor: ${FLAVOR_NAME} with label ${LABEL_KEY}=${LABEL_VALUE}"
+        fi
+
+        # Verify creation
+        oc get resourceflavor ${FLAVOR_NAME}
